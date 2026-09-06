@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isClinician() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'clinician'
+      );
+    }
+
+    // 1. Users collection: Cryptographic identity and role lock
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isClinician());
+      allow list: if isSignedIn() && isClinician();
+      allow create: if isSignedIn() && isOwner(userId) &&
+        isValidId(userId) &&
+        request.resource.data.id == request.auth.uid &&
+        request.resource.data.role in ['clinician', 'patient'];
+      // Strict role lock: users cannot change or elevate their own role once created
+      allow update: if isSignedIn() && isOwner(userId) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt', 'avatarUrl', 'photoUrl', 'email']);
+      allow delete: if false;
+
+      // User chat check-ins and longitudinal clinical triage logs
+      match /checkins/{checkinId} {
+        allow get, list: if isSignedIn() && (isOwner(userId) || isClinician());
+        allow create, update: if isSignedIn() && (isOwner(userId) || isClinician());
+        allow delete: if false;
+      }
+
+      // User Care Companion conversations
+      match /conversations/{convId} {
+        allow get, list: if isSignedIn() && (isOwner(userId) || isClinician());
+        allow create, update: if isSignedIn() && (isOwner(userId) || isClinician());
+        allow delete: if false;
+
+        match /messages/{msgId} {
+          allow get, list: if isSignedIn() && (isOwner(userId) || isClinician());
+          allow create, update: if isSignedIn() && (isOwner(userId) || isClinician());
+          allow delete: if false;
+        }
+      }
+    }
+
+    // 2. Clinicians collection: restricted to verified clinicians
+    match /clinicians/{clinicianId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isClinician() && (
+        isOwner(clinicianId) ||
+        (request.resource.data.userId is string && request.resource.data.userId == request.auth.uid)
+      );
+      allow delete: if false;
+    }
+
+    // 3. Patients collection and subcollections: relationship-bound access
+    match /patients/{patientId} {
+      function isPatientOfRecord() {
+        return isSignedIn() && (
+          (resource != null && resource.data.userId == request.auth.uid) ||
+          patientId == request.auth.uid
+        );
+      }
+
+      function isClinicianOfRecord() {
+        return isSignedIn() && isClinician() && (
+          resource != null && resource.data.primaryClinicianId == request.auth.uid
+        );
+      }
+
+      allow get, list: if isSignedIn() && (isPatientOfRecord() || isClinicianOfRecord());
+      allow create: if isSignedIn() && (
+        (request.resource.data.userId == request.auth.uid && request.resource.data.id == request.auth.uid) ||
+        (isClinician() && request.resource.data.primaryClinicianId == request.auth.uid)
+      );
+      allow update: if isSignedIn() && (isPatientOfRecord() || isClinicianOfRecord());
+      allow delete: if false;
+
+      // Subcollections under patient
+      function isSubPatient() {
+        return isSignedIn() && (
+          (exists(/databases/$(database)/documents/patients/$(patientId)) &&
+           get(/databases/$(database)/documents/patients/$(patientId)).data.userId == request.auth.uid) ||
+          patientId == request.auth.uid
+        );
+      }
+
+      function isSubClinician() {
+        return isSignedIn() && isClinician() && (
+          exists(/databases/$(database)/documents/patients/$(patientId)) &&
+          get(/databases/$(database)/documents/patients/$(patientId)).data.primaryClinicianId == request.auth.uid
+        );
+      }
+
+      // Treatment Timeline
+      match /treatmentTimeline/{eventId} {
+        allow get, list: if isSubPatient() || isSubClinician();
+        allow create, update: if isSubClinician();
+        allow delete: if false;
+      }
+
+      // Discomfort / Pain Check-Ins (historical records)
+      match /discomfortCheckins/{checkInId} {
+        allow get, list: if isSubPatient() || isSubClinician();
+        allow create: if isSubPatient();
+        allow update, delete: if false;
+      }
+
+      // Clinical Incidents / Triage Tickets
+      match /clinicalIncidents/{incidentId} {
+        allow get, list: if isSubPatient() || isSubClinician();
+        allow create: if isSubPatient() || isSubClinician();
+        allow update: if isSubClinician();
+        allow delete: if false;
+      }
+
+      // Care Companion Conversations
+      match /careConversations/{convId} {
+        allow get, list: if isSubPatient() || isSubClinician();
+        allow create, update: if isSubPatient() || isSubClinician();
+        allow delete: if false;
+
+        match /messages/{msgId} {
+          allow get, list: if isSubPatient() || isSubClinician();
+          allow create, update: if isSubPatient() || isSubClinician();
+          allow delete: if false;
+        }
+      }
+
+      // Bonding Verification Reviews
+      match /bondingReviews/{reviewId} {
+        allow get, list: if isSubPatient() || isSubClinician();
+        allow create, update: if isSubClinician();
+        allow delete: if false;
+      }
+
+      // Clinical Messages
+      match /clinicalMessages/{messageId} {
+        allow get, list: if isSubPatient() || isSubClinician();
+        allow create: if isSubPatient() || isSubClinician();
+        allow update: if isSubClinician() || isSubPatient();
+        allow delete: if false;
+      }
+    }
+  }
+}

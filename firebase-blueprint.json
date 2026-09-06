@@ -1,0 +1,272 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Base authenticated user profile storing identity and authorized role.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "name": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["clinician", "patient"] },
+        "avatarUrl": { "type": "string", "maxLength": 2048 },
+        "photoUrl": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "name", "role", "createdAt", "updatedAt"]
+    },
+    "UserCheckin": {
+      "title": "UserCheckin",
+      "description": "Patient check-in and conversational triage log storing prompt, response, structured triage, and timestamp.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userPrompt": { "type": "string", "maxLength": 2048 },
+        "conversationalReply": { "type": "string", "maxLength": 4096 },
+        "triageMetadata": {
+          "type": "object",
+          "properties": {
+            "urgency": { "type": "string", "enum": ["low", "medium", "high"] },
+            "affectedRegion": { "type": "string", "maxLength": 128 },
+            "suspectedIssue": { "type": "string", "enum": ["loose_bracket", "poking_wire", "abrasion", "general_soreness", "other"] },
+            "recommendedAction": { "type": "string", "maxLength": 512 }
+          },
+          "required": ["urgency", "affectedRegion", "suspectedIssue", "recommendedAction"]
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "userPrompt", "conversationalReply", "triageMetadata", "timestamp"]
+    },
+    "ClinicianProfile": {
+      "title": "ClinicianProfile",
+      "description": "Profile information for licensed orthodontic clinicians.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "clinicName": { "type": "string", "maxLength": 256 },
+        "licenseNumber": { "type": "string", "maxLength": 64 },
+        "specialty": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "userId", "clinicName", "licenseNumber"]
+    },
+    "PatientProfile": {
+      "title": "PatientProfile",
+      "description": "Patient orthodontic record and clinical assignment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "primaryClinicianId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "dob": { "type": "string", "maxLength": 32 },
+        "archType": { "type": "string", "enum": ["maxillary", "mandibular", "both"] },
+        "currentStage": { "type": "string", "maxLength": 128 },
+        "startDate": { "type": "string", "maxLength": 64 },
+        "targetCompletion": { "type": "string", "maxLength": 64 },
+        "treatmentId": { "type": "string", "maxLength": 128 },
+        "avatarUrl": { "type": "string", "maxLength": 2048 }
+      },
+      "required": ["id", "userId", "primaryClinicianId", "name"]
+    },
+    "TreatmentMilestone": {
+      "title": "TreatmentMilestone",
+      "description": "Milestone event in the patient treatment timeline.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "treatmentId": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "stageNumber": { "type": "integer" },
+        "scheduledDate": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["completed", "in_progress", "upcoming"] },
+        "notes": { "type": "string", "maxLength": 2048 },
+        "completedDate": { "type": "string", "maxLength": 64 },
+        "associatedReviewId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "treatmentId", "patientId", "title", "stageNumber", "status"]
+    },
+    "PainCheckIn": {
+      "title": "PainCheckIn",
+      "description": "Patient-reported discomfort check-in, symptoms, and optional photo metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "painScore": { "type": "integer" },
+        "discomfortLocation": { "type": "string", "maxLength": 256 },
+        "symptoms": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string", "maxLength": 2048 },
+        "photoUrl": { "type": "string", "maxLength": 4096 },
+        "aiSummary": { "type": "string", "maxLength": 2048 },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "patientId", "painScore", "timestamp"]
+    },
+    "SmilePhoto": {
+      "title": "SmilePhoto",
+      "description": "Periodic patient intraoral photograph.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "photoUrl": { "type": "string", "maxLength": 4096 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string", "maxLength": 1024 },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "patientId", "photoUrl", "timestamp"]
+    },
+    "CareConversation": {
+      "title": "CareConversation",
+      "description": "Patient conversation with Care Companion AI.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastMessageSummary": { "type": "string", "maxLength": 1024 },
+        "isEmergencyAlert": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "closed", "escalated"] }
+      },
+      "required": ["id", "patientId", "createdAt", "updatedAt"]
+    },
+    "CompanionChatMessage": {
+      "title": "CompanionChatMessage",
+      "description": "Individual message inside a Care Companion conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string", "maxLength": 4096 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "quickReplies": { "type": "array", "items": { "type": "string" } },
+        "isEmergencyAlert": { "type": "boolean" }
+      },
+      "required": ["id", "conversationId", "role", "content", "timestamp"]
+    },
+    "ClinicalIncident": {
+      "title": "ClinicalIncident",
+      "description": "Structured acute concern or appliance incident for clinical triage.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "patientName": { "type": "string", "maxLength": 128 },
+        "patientReport": { "type": "string", "maxLength": 2048 },
+        "painScore": { "type": "integer" },
+        "reportedSymptoms": { "type": "array", "items": { "type": "string" } },
+        "suspectedHardwareConcern": { "type": "string", "maxLength": 256 },
+        "affectedArea": { "type": "string", "maxLength": 256 },
+        "photoUrl": { "type": "string", "maxLength": 4096 },
+        "urgencyCategory": { "type": "string", "enum": ["routine", "contact_clinic", "priority_review", "urgent_emergency"] },
+        "clinicianReviewRecommended": { "type": "boolean" },
+        "patientGuidance": { "type": "array", "items": { "type": "string" } },
+        "uncertainty": { "type": "string", "maxLength": 1024 },
+        "status": { "type": "string", "enum": ["new", "reviewed", "resolved"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "clinicianActionTaken": { "type": "string", "maxLength": 2048 },
+        "isSimulatedDemo": { "type": "boolean" }
+      },
+      "required": ["id", "patientId", "patientName", "patientReport", "painScore", "urgencyCategory", "status", "timestamp"]
+    },
+    "VisualReview": {
+      "title": "VisualReview",
+      "description": "AI-assisted bracket bonding visual verification with clinician sign-off.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "clinicianId": { "type": "string", "maxLength": 128 },
+        "treatmentId": { "type": "string", "maxLength": 128 },
+        "referenceImageUrl": { "type": "string", "maxLength": 4096 },
+        "actualImageUrl": { "type": "string", "maxLength": 4096 },
+        "overall_reviewable": { "type": "boolean" },
+        "qualityStatus": { "type": "string", "maxLength": 64 },
+        "summary": { "type": "string", "maxLength": 2048 },
+        "findings": { "type": "array", "items": { "type": "object" } },
+        "limitations": { "type": "array", "items": { "type": "string" } },
+        "clinicianNotes": { "type": "string", "maxLength": 2048 },
+        "status": { "type": "string", "enum": ["draft", "verified", "rejected", "needs_followup"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "isSimulatedDemo": { "type": "boolean" }
+      },
+      "required": ["id", "patientId", "clinicianId", "status", "createdAt"]
+    },
+    "ClinicalMessage": {
+      "title": "ClinicalMessage",
+      "description": "Secure communication between patient and clinician.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "receiverId": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "content": { "type": "string", "maxLength": 2048 },
+        "priority": { "type": "string", "enum": ["normal", "urgent"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "receiverId", "patientId", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles storing role, identity, and timestamps."
+    },
+    "/users/{userId}/checkins/{checkinId}": {
+      "schema": "UserCheckin",
+      "description": "Patient check-in and conversational triage log storing prompt, response, structured triage, and timestamp."
+    },
+    "/clinicians/{clinicianId}": {
+      "schema": "ClinicianProfile",
+      "description": "Licensed clinician practice profiles."
+    },
+    "/patients/{patientId}": {
+      "schema": "PatientProfile",
+      "description": "Patient orthodontic records."
+    },
+    "/patients/{patientId}/treatmentTimeline/{eventId}": {
+      "schema": "TreatmentMilestone",
+      "description": "Milestones and progress on the patient treatment timeline."
+    },
+    "/patients/{patientId}/discomfortCheckins/{checkinId}": {
+      "schema": "PainCheckIn",
+      "description": "Discomfort scores, pain locations, and symptom reports."
+    },
+    "/patients/{patientId}/smilePhotos/{photoId}": {
+      "schema": "SmilePhoto",
+      "description": "Patient progress photographs."
+    },
+    "/patients/{patientId}/careConversations/{conversationId}": {
+      "schema": "CareConversation",
+      "description": "Conversations held with the OrthoBond Care Companion AI."
+    },
+    "/patients/{patientId}/careConversations/{conversationId}/messages/{messageId}": {
+      "schema": "CompanionChatMessage",
+      "description": "Individual messages in a Care Companion conversation."
+    },
+    "/patients/{patientId}/clinicalIncidents/{incidentId}": {
+      "schema": "ClinicalIncident",
+      "description": "Acute incidents generated from conversations and check-ins for clinical triage."
+    },
+    "/patients/{patientId}/bondingReviews/{reviewId}": {
+      "schema": "VisualReview",
+      "description": "Gemini-assisted visual bonding verification records verified by clinician."
+    },
+    "/patients/{patientId}/clinicalMessages/{messageId}": {
+      "schema": "ClinicalMessage",
+      "description": "Secure messages between patient and assigned clinician."
+    }
+  }
+}

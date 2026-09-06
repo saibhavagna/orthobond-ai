@@ -1,0 +1,6 @@
+{
+  "name": "OrthoBond AI",
+  "description": "AI-assisted orthodontic care platform connecting continuous patient monitoring with Gemini-powered visual bracket verification for clinicians.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
